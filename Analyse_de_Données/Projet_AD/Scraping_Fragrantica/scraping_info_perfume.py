@@ -1,13 +1,28 @@
 from bs4 import BeautifulSoup
 import time
+import random
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from fake_useragent import UserAgent
+from selenium.webdriver.common.proxy import Proxy, ProxyType
 
 import pandas as pd
 import numpy as np
+
+
+def read_proxies(file_path):
+    """
+    Lit les proxies à partir d'un fichier et retourne une liste de proxies.
+    """
+    with open(file_path, 'r') as file:
+        proxies = file.readlines()
+    # Supprimer les espaces blancs et les lignes vides
+    proxies = [proxy.strip() for proxy in proxies if proxy.strip()]
+    return proxies
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~FONCTION PRINCIPALE~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 def scraping_multi_perfume_info(list_url):
@@ -16,19 +31,20 @@ def scraping_multi_perfume_info(list_url):
     Retourne un DataFrame avec ces informations.
     """
     all_data = [] 
+    ua = UserAgent()
 
     #✅ Configuration Selenium
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Désactiver l'ouverture de Chrome
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--blink-settings=imagesEnabled=false") # Pas besoin d'images = gain de temps
     options.add_argument("--headless=new")  # Nouvelle version plus rapide du headless
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
-
+    #options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    
     for url in list_url :
         # 2) Création du driver
+        options.add_argument(f"user-agent={ua.random}")
         driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
         options=options)
@@ -70,7 +86,7 @@ def scrape_perfume_info(soup):
         "rating_count": extract_rating_count(soup),
         "main_accords": extract_main_accords(soup),
         "gender": extract_gender(votes_dict),
-        "longevity": (votes_dict),
+        "longevity": extract_longevity(votes_dict),
         "sillage": extract_sillage(votes_dict),
         "price_feeling": extract_price_feeling(votes_dict),    
         "top_notes": extract_pyramid_ingredients(soup, "Top Notes"),
@@ -211,10 +227,3 @@ def extract_pyramid_ingredients(soup, pyramid_section):
     return list({a_tag.next_sibling.strip() for a_tag in div.find_all('a') if a_tag.next_sibling}) if div else []
 
 
-urls = [
-        "https://www.fragrantica.com/perfume/By-Kilian/Black-Phantom-43632.html",
-        "https://www.fragrantica.com/perfume/Mancera/Wild-Leather-28084.html",
-        "https://www.fragrantica.com/perfume/Ministry-of-Oud/Oud-Satin-74588.html"]
-
-df2 = scraping_multi_perfume_info(urls)
-print(df2.head())
