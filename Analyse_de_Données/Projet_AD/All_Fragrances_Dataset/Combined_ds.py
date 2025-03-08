@@ -1,7 +1,7 @@
 import pandas as pd
 
 df_all = pd.read_csv('All_Fragrantica_dataset.csv')
-df = pd.read_csv('Fragrantica_dataset.csv')
+df = pd.read_csv('Fragrantica_dataset_Hichem.csv')
 print(df_all.shape)
 print(df.shape)
 combined_df = pd.concat([df_all, df], axis=0)
