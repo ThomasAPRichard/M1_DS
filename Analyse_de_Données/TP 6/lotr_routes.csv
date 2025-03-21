@@ -1,0 +1,45 @@
+Lieu_1,Lieu_2,Distance
+Minas Tirith,Osgiliath,2
+Osgiliath,Minas Morgul,15
+Minas Morgul,Cirith Ungol,7
+Cirith Ungol,Mount Doom,12
+Mount Doom,Barad-dur,8
+Minas Tirith,Edoras,15
+Edoras,Helms Deep,10
+Helms Deep,Isengard,14
+Isengard,Orthanc,5
+Isengard,Fangorn,8
+Fangorn,Lothlorien,12
+Lothlorien,Moria,15
+Moria,Rivendell,18
+Rivendell,Weathertop,10
+Weathertop,Bree,7
+Bree,The Shire,8
+The Shire,Michel Delving,6
+Michel Delving,Hobbiton,5
+Hobbiton,Bywater,4
+Bywater,Green Dragon,3
+Green Dragon,Brandywine Bridge,6
+Brandywine Bridge,Tom Bombadils House,9
+Tom Bombadils House,Old Forest,7
+Old Forest,Barrow-downs,10
+Barrow-downs,Weathertop,12
+Minas Tirith,Helms Deep,20
+Edoras,Isengard,12
+Lothlorien,Rivendell,3
+Rivendell,Moria,17
+Bree,Weathertop,5
+The Shire,Brandywine Bridge,7
+Moria,Isengard,22
+Fangorn,Edoras,9
+Cirith Ungol,Barad-dur,10
+Minas Tirith,Bree,25
+Rivendell,Bree,15
+Helms Deep,Fangorn,10
+Mount Doom,Cirith Ungol,6
+Isengard,Minas Tirith,18
+Old Forest,Brandywine Bridge,8
+Lothlorien,Edoras,16
+Weathertop,Hobbiton,14
+Osgiliath,Barad-dur,22
+Bree,Michel Delving,10
