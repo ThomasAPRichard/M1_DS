@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import time
 import random
+import copy
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -13,23 +14,16 @@ import pandas as pd
 import numpy as np
 
 
-def read_proxies(file_path):
-    """
-    Lit les proxies à partir d'un fichier et retourne une liste de proxies.
-    """
-    with open(file_path, 'r') as file:
-        proxies = file.readlines()
-    # Supprimer les espaces blancs et les lignes vides
-    proxies = [proxy.strip() for proxy in proxies if proxy.strip()]
-    return proxies
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~FONCTION PRINCIPALE~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+'''
+ANCIENNE VERSION 
+
 def scraping_multi_perfume_info(list_url):
     """
     Scrap les informations de plusieurs parfums depuis une liste d'URLs.
     Retourne un DataFrame avec ces informations.
     """
+
     all_data = [] 
     ua = UserAgent()
 
@@ -40,10 +34,10 @@ def scraping_multi_perfume_info(list_url):
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--blink-settings=imagesEnabled=false") # Pas besoin d'images = gain de temps
     options.add_argument("--headless=new")  # Nouvelle version plus rapide du headless
-    #options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
-    
+     
     for url in list_url :
         # 2) Création du driver
+
         options.add_argument(f"user-agent={ua.random}")
         driver = webdriver.Chrome(
         service=Service(ChromeDriverManager().install()),
@@ -63,7 +57,87 @@ def scraping_multi_perfume_info(list_url):
     # Convertir la liste de dicts en DataFrame
     all_data_df = pd.DataFrame(all_data)
     return all_data_df
-        
+''' 
+
+def scraping_multi_perfume_info(list_url):
+    """
+    Scrap les informations de plusieurs parfums depuis une liste d'URLs (via Selenium).
+    Retourne un DataFrame avec ces informations.
+    """
+
+    all_data = []
+    ua = UserAgent()
+
+    # Configuration commune de Selenium
+    options = webdriver.ChromeOptions()
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--blink-settings=imagesEnabled=false") # Pas besoin d'images = gain de temps
+    options.add_argument("--headless=new") 
+    options.add_argument(f"user-agent={ua.random}")
+    
+    
+    # On compte le nombre d'URLs qu'on scrape
+    num_url = 0
+    for url in list_url:
+        num_url += 1
+        # Mesurer le temps que ça prend pour scraper les infos de cette url
+        url_start_time = time.time()
+
+        # On va réessayer plusieurs fois en cas de 429 Too many requests
+        max_retries = 2
+        retry_count = 0
+        success = False
+
+        while retry_count < max_retries and not success:
+            retry_count += 1
+
+            try:
+                
+                # 1) Création du driver
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options)
+                # 2) Charger la page
+                driver.get(url)
+                # 3) Parse
+                soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+                driver.quit()
+                # 4) Détecter si on est sur la page 429
+                if is_429_too_many_requests(soup):
+                    print(f"\n🚫 429 détecté sur la {num_url}ieme url, tentative {retry_count}/{max_retries}. ")
+                    print(f"🚫 pour {url}")
+                    temps_attente = max(601, 43**retry_count)  # Attendre 10 minutes ou ~30 Minutes
+                    print(f"On attend {temps_attente/60} minutes...\n")
+                    time.sleep(temps_attente)  
+                else:
+                    # 5) Tout va bien, on extrait
+                    perfume_info = scrape_perfume_info(soup)
+                    perfume_info['url'] = url
+
+                    # On ajoute le résultat (dict) à la liste all_data
+                    all_data.append(perfume_info)
+
+                    success = True
+
+            except Exception as e:
+                print(f"⚠️ Erreur sur l'URL {url}, tentative {retry_count}: {e}")
+                # On peut attendre un peu avant de retenter
+                time.sleep(5)
+            
+        if not success:
+            # Au bout de max_retries, on abandonne
+            print(f"❌ Echec final pour {url} après {max_retries} essais.")
+
+        # Mesurer le temps de scraping pour cette URL
+        url_end_time = time.time()
+        url_duration = url_end_time - url_start_time
+        print(f"⏱️ Temps de scraping pour {url}: \n temps total ={url_duration:.2f} secondes. \n")
+
+
+    # Convertir la liste de dicts en DataFrame
+    df = pd.DataFrame(all_data)
+    return df
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~FONCTION SECONDAIRE~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -134,15 +208,19 @@ def extract_all_votes(soup):
 # 1-2) Nom du parfum & Marque
 def extract_name_and_brand(soup):
     """
+    REPARER : On peut aussi extraire le nom et la marque depuis la nom de l'url, ça évite le pb des virgules
     Extrait le nom du parfum et la marque depuis la balise meta 'keywords'.
     """
-    meta_keywords = soup.find("meta", {"name": "keywords"})
-    if meta_keywords:
-        content = meta_keywords.get("content", "")
-        parts = [p.strip() for p in content.split(",")]  # Nettoyer les espaces
-        name = parts[0] if parts else None
-        brand = parts[1] if len(parts) > 1 else None
-        return name, brand
+
+    canonical_link = soup.find("link", {"rel": "canonical"})
+    if canonical_link:
+        url = canonical_link.get("href", "")
+        # Extraire les parties de l'URL
+        parts = url.split("/")
+        if len(parts) >= 5:
+            brand = parts[4].replace("-", " ").strip()  # La marque est le 5e élément
+            name = parts[5].replace("-", " ").strip()  # Le nom est le 6e élément
+            return name, brand
     return None, None
 
 #3) Parfumeur
@@ -227,3 +305,10 @@ def extract_pyramid_ingredients(soup, pyramid_section):
     return list({a_tag.next_sibling.strip() for a_tag in div.find_all('a') if a_tag.next_sibling}) if div else []
 
 
+# 13) Too many requests
+def is_429_too_many_requests(soup):
+    # Vérifie par exemple si <h1><span>429</span> Too Many Requests</h1> existe
+    title = soup.find('title')
+    if title and 'Too Many' in title.get_text(strip=True):
+        return True
+    return False
