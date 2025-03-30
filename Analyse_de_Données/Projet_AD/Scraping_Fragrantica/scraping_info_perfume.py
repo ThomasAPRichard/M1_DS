@@ -86,7 +86,7 @@ def scraping_multi_perfume_info(list_url):
         url_start_time = time.time()
 
         # On va réessayer plusieurs fois en cas de 429 Too many requests
-        max_retries = 2
+        max_retries = 3
         retry_count = 0
         success = False
 
@@ -107,7 +107,7 @@ def scraping_multi_perfume_info(list_url):
                 if is_429_too_many_requests(soup):
                     print(f"\n🚫 429 détecté sur la {num_url}ieme url, tentative {retry_count}/{max_retries}. ")
                     print(f"🚫 pour {url}")
-                    temps_attente = max(601, 43**retry_count)  # Attendre 10 minutes ou ~30 Minutes
+                    temps_attente = max(601, 1800*(retry_count-1))  # Attendre 10 minutes ou ~30 Minutes
                     print(f"On attend {temps_attente/60} minutes...\n")
                     time.sleep(temps_attente)  
                 else:
